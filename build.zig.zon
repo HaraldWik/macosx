@@ -1,5 +1,5 @@
 .{
-    .name = .objc,
+    .name = .macosx,
     .version = "0.0.0",
     .fingerprint = 0x42fb94c845b30e88,
     .minimum_zig_version = "0.16.0",
