@@ -122,6 +122,11 @@ pub const String = opaque {
             else => unreachable,
         };
     }
+
+    // Helper
+    pub fn fromSlice(s: [*:0]const u8) *String {
+        return String.initWithUtf8String(.alloc(), s).?;
+    }
 };
 
 /// An immutable byte buffer.

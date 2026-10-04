@@ -1,6 +1,6 @@
 const c = @import("objc");
 const NS = @import("foundation.zig");
-const CA = @import("core_graphics.zig");
+const CA = @import("quartzcore.zig");
 
 pub const ColorSpaceName = *NS.String;
 
@@ -1329,12 +1329,9 @@ pub const Window = opaque {
     }
 
     pub fn setTitleSlice(window: *Window, title: [*:0]const u8) void {
-        const string = NS.String.alloc();
+        const string: *NS.String = .fromSlice(title);
         defer string.release();
-
-        const initialized = string.initWithUtf8String(title).?;
-
-        window.setTitle(initialized);
+        window.setTitle(string);
     }
 
     pub fn setTitle(window: *Window, string: *NS.String) void {
@@ -1343,11 +1340,11 @@ pub const Window = opaque {
 
     // Visibility
     pub fn makeKeyAndOrderFront(window: *Window) void {
-        c.msgSend(void, window, "makeKeyAndOrderFront:", .{@as(?*anyopaque, null)});
+        c.msgSend(void, window, "makeKeyAndOrderFront:", .{null});
     }
 
     pub fn orderOut(window: *Window) void {
-        c.msgSend(void, window, "orderOut:", .{@as(?*anyopaque, null)});
+        c.msgSend(void, window, "orderOut:", .{null});
     }
 
     pub fn close(window: *Window) void {
@@ -1373,15 +1370,15 @@ pub const Window = opaque {
 
     // Minimize / maximize
     pub fn miniaturize(window: *Window) void {
-        c.msgSend(void, window, "miniaturize:", .{@as(?*anyopaque, null)});
+        c.msgSend(void, window, "miniaturize:", .{null});
     }
 
     pub fn deminiaturize(window: *Window) void {
-        c.msgSend(void, window, "deminiaturize:", .{@as(?*anyopaque, null)});
+        c.msgSend(void, window, "deminiaturize:", .{null});
     }
 
     pub fn zoom(window: *Window) void {
-        c.msgSend(void, window, "zoom:", .{@as(?*anyopaque, null)});
+        c.msgSend(void, window, "zoom:", .{null});
     }
 
     // Frame
@@ -1402,7 +1399,7 @@ pub const Window = opaque {
     }
 
     pub fn toggleFullScreen(window: *Window) void {
-        c.msgSend(void, window, "toggleFullScreen:", .{@as(?*anyopaque, null)});
+        c.msgSend(void, window, "toggleFullScreen:", .{null});
     }
 
     // Style
@@ -1476,16 +1473,11 @@ pub const View = opaque {
     }
 
     pub fn setWantsLayer(self: *View, value: bool) void {
-        c.msgSend(
-            void,
-            self,
-            .registerName("setWantsLayer:"),
-            .{value},
-        );
+        c.msgSend(void, self, "setWantsLayer:", .{value});
     }
 
     pub fn layer(self: *View) ?*CA.Layer {
-        return c.msgSend(?*CA.Layer, self, .registerName("layer"), .{});
+        return c.msgSend(?*CA.Layer, self, "layer", .{});
     }
 
     pub fn setLayer(self: *View, layer_: *CA.Layer) void {

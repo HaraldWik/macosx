@@ -20,6 +20,7 @@ pub fn build(b: *std.Build) void {
     });
 
     exe.root_module.linkFramework("AppKit", .{});
+    exe.root_module.linkFramework("Metal", .{});
 
     b.installArtifact(exe);
 
@@ -30,7 +31,9 @@ pub fn build(b: *std.Build) void {
 
     run_cmd.step.dependOn(b.getInstallStep());
 
-    if (b.args) |args| run_cmd.addArgs(args);
+    run_cmd.addPassthruArgs();
+
+    run_cmd.addPassthruArgs();
 
     const exe_tests = b.addTest(.{
         .root_module = exe.root_module,

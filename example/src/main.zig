@@ -2,6 +2,31 @@ const std = @import("std");
 const c = @import("objc");
 const NS = @import("frameworks").NS;
 const CA = @import("frameworks").CA;
+const MTL = @import("frameworks").MTL;
+
+const Vertex = extern struct {
+    position: [2]f32,
+    color: [3]f32,
+};
+
+const vertices = [_]Vertex{
+    .{
+        .position = .{ 0.0, 0.5 },
+        .color = .{ 1.0, 0.25, 0.65 },
+    },
+    .{
+        .position = .{ -0.5, -0.5 },
+        .color = .{ 0.25, 0.55, 1.0 },
+    },
+    .{
+        .position = .{ 0.5, -0.5 },
+        .color = .{ 0.35, 1.0, 0.65 },
+    },
+};
+
+const indices = [_]u16{
+    0, 1, 2,
+};
 
 const View = struct {
     pub fn class() !*c.Class {
@@ -273,11 +298,74 @@ pub fn main() !void {
 
     const metal_layer: *CA.MetalLayer = .new();
 
+    const device: *MTL.Device = try .new();
+    metal_layer.setDevice(device);
+
+    const command_queue = try device.newCommandQueue();
+    const library = try device.newLibraryWithFileSlice("triangle.metallib");
+
+    const vertex = try library.newFunctionWithNameSlice("vertex_main");
+    const fragment = try library.newFunctionWithNameSlice("fragment_main");
+
+    const pipeline_descriptor: *MTL.RenderPipelineDescriptor = .new();
+
+    pipeline_descriptor.setVertexFunction(vertex);
+    pipeline_descriptor.setFragmentFunction(fragment);
+
+    const color_attachment = pipeline_descriptor
+        .colorAttachments()
+        .objectAtIndexedSubscript(0);
+
+    color_attachment.setPixelFormat(.bgra8Unorm);
+
+    const pipeline = try device.newRenderPipelineState(pipeline_descriptor);
+
+    view.setWantsLayer(true);
     view.setLayer(metal_layer.toLayer());
+
+    const vertex_buffer = try device.newBufferWithBytes(
+        @ptrCast(&vertices),
+        @sizeOf(@TypeOf(vertices)),
+        .storage_mode_managed,
+    );
+    defer vertex_buffer.release();
+
+    const index_buffer = try device.newBufferWithBytes(
+        @ptrCast(&indices),
+        @sizeOf(@TypeOf(indices)),
+        .storage_mode_managed,
+    );
+    defer index_buffer.release();
 
     while (window_info.running) {
         while (app.nextEventMatchingMask(.any, .distantPast(), NS.RunLoop.default.*, true)) |event| {
             app.sendEvent(event);
         }
+
+        const drawable = metal_layer.nextDrawable() orelse continue;
+
+        const command_buffer = command_queue.commandBuffer() orelse return error.CommandQueueCommandBuffer;
+
+        const render_pass: *MTL.RenderPassDescriptor = .new();
+
+        const attachment = render_pass
+            .colorAttachments()
+            .objectAtIndexedSubscript(0);
+
+        attachment.setTexture(drawable.texture());
+        attachment.setLoadAction(.clear);
+        attachment.setStoreAction(.store);
+
+        const encoder = command_buffer.renderCommandEncoder(render_pass);
+
+        encoder.setRenderPipelineState(pipeline);
+
+        encoder.setVertexBuffer(vertex_buffer, 0, 0);
+        encoder.drawIndexedPrimitives(.triangle, 3, .uint16, index_buffer, 0);
+
+        encoder.endEncoding();
+
+        command_buffer.present(drawable);
+        command_buffer.commit();
     }
 }

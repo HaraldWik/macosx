@@ -2,7 +2,7 @@
     .name = .macosx,
     .version = "0.0.0",
     .fingerprint = 0x912ee411eb43b65c,
-    .minimum_zig_version = "0.16.0",
+    .minimum_zig_version = "0.17.0",
     .dependencies = .{},
     .paths = .{
         "build.zig",

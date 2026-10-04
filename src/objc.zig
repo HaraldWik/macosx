@@ -10,11 +10,10 @@ pub fn msgSend(comptime ReturnType: type, object: anytype, comptime selector_nam
         };
         if (!info.is_tuple) @compileError("expected tuple, found struct '" ++ @typeName(args) ++ "'");
 
-        var param_types: [info.fields.len + 2]type = undefined;
+        var param_types: [info.field_types.len + 2]type = undefined;
         param_types[0] = @TypeOf(object);
         param_types[1] = SEL;
-        for (info.fields, param_types[2..]) |field, *param_type| switch (@typeInfo(field.type)) {
-            .null,
+        for (info.field_types, param_types[2..]) |field_type, *param_type| switch (@typeInfo(field_type)) {
             .comptime_int,
             .comptime_float,
             .enum_literal,
@@ -25,13 +24,14 @@ pub fn msgSend(comptime ReturnType: type, object: anytype, comptime selector_nam
                 std.fmt.comptimePrint(
                     "parameter of type '{s}' not allowed in selector '{s}' with calling convention '{t}'",
                     .{
-                        @typeName(field.type),
+                        @typeName(field_type),
                         selector_name,
                         std.builtin.CallingConvention.c,
                     },
                 ),
             ),
-            else => param_type.* = field.type,
+            .null => param_type.* = ?*anyopaque,
+            else => param_type.* = field_type,
         };
 
         break :func @Fn(&param_types, &@splat(.{}), ReturnType, .{ .@"callconv" = .c });
@@ -167,10 +167,10 @@ pub const Class = opaque {
 
     pub fn addMethod(class: *Class, name: SEL, implementation: anytype) AddMethodError!void {
         const implementation_info = @typeInfo(@TypeOf(implementation)).@"fn";
-        comptime if (!implementation_info.calling_convention.eql(.c)) {
+        comptime if (!implementation_info.attrs.@"callconv".eql(.c)) {
             @compileError(std.fmt.comptimePrint(
                 "excpected method to be calling convention '{t}', found '{t}'",
-                .{ std.builtin.CallingConvention.c, implementation_info.calling_convention },
+                .{ std.builtin.CallingConvention.c, implementation_info.attrs.@"callconv" },
             ));
         };
 
@@ -460,22 +460,22 @@ pub fn ProtocolDecl(name: @EnumLiteral(), VTable: type) type {
             const userdata = instance.getIndexedIvars(Userdata);
             userdata.* = userdata_value;
 
-            inline for (@typeInfo(VTable).@"struct".fields) |field| {
-                const implementation = switch (@typeInfo(field.type)) {
-                    .optional => if (@field(table, field.name)) |imp| imp else continue,
+            inline for (@typeInfo(VTable).@"struct".field_names, @typeInfo(VTable).@"struct".field_types) |field_name, field_type| {
+                const implementation = switch (@typeInfo(field_type)) {
+                    .optional => if (@field(table, field_name)) |imp| imp else continue,
                     .@"fn" => |@"fn"| f: {
-                        if (@"fn".calling_convention != std.builtin.CallingConvention.c)
+                        if (@"fn".@"callconv" != std.builtin.CallingConvention.c)
                             @compileError(std.fmt.comptimePrint(
                                 "excpected method '{s}' on protocol '{t}' to be calling convention '{s}', found '{s}'",
-                                .{ field.name, name, std.builtin.CallingConvention.c, @"fn".calling_convention },
+                                .{ field_name, name, std.builtin.CallingConvention.c, @"fn".@"callconv" },
                             ));
 
-                        break :f @field(table, field.name);
+                        break :f @field(table, field_name);
                     },
                     else => unreachable,
                 };
 
-                try class.addMethod(.registerName(field.name), implementation);
+                try class.addMethod(.registerName(field_name), implementation);
             }
 
             return .{
@@ -529,8 +529,8 @@ pub const helper = struct {
         types = types ++ .{typeEncoding(info.return_type orelse void)};
         types = types ++ "@:";
 
-        for (info.params) |param| {
-            const T = param.type orelse @compileError("generic parameters are not supported");
+        for (info.param_types) |param_type| {
+            const T = param_type orelse @compileError("generic parameters are not supported");
             types = types ++ .{typeEncoding(T)};
         }
 

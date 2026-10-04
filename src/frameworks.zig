@@ -1,6 +1,7 @@
 pub const foundation = @import("foundation.zig");
 pub const appkit = @import("appkit.zig");
-pub const core_graphic = @import("core_graphics.zig");
+pub const quartzcore = @import("quartzcore.zig");
+pub const metal = @import("metal.zig");
 
 pub const NS = struct {
     pub const Array = foundation.Array;
@@ -43,4 +44,6 @@ pub const NS = struct {
     pub const Window = appkit.Window;
 };
 
-pub const CA = core_graphic;
+pub const CA = quartzcore;
+
+pub const MTL = metal;
