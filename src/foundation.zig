@@ -127,6 +127,10 @@ pub const String = opaque {
     pub fn fromSlice(s: [*:0]const u8) *String {
         return String.initWithUtf8String(.alloc(), s).?;
     }
+
+    pub fn format(self: *String, writer: *std.Io.Writer) std.Io.Writer.Error!void {
+        try writer.writeAll(std.mem.span(self.utf8()));
+    }
 };
 
 /// An immutable byte buffer.

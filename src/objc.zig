@@ -423,7 +423,7 @@ pub const Object = opaque {
     pub const getClass = object_getClass;
     pub const setClass = object_setClass;
     pub fn getIndexedIvars(object: *Object, comptime T: type) *T {
-        return @ptrCast(object_getIndexedIvars(object));
+        return @ptrCast(@alignCast(object_getIndexedIvars(object)));
     }
     pub const getIvar = object_getIvar;
     pub const setIvar = object_setIvar;

@@ -729,6 +729,32 @@ pub const CommandBuffer = opaque {
     }
 };
 
+pub const CompileOptions = opaque {
+    pub fn alloc() *CompileOptions {
+        return c.msgSend(*CompileOptions, c.class("MTLCompileOptions"), "alloc", .{});
+    }
+
+    pub fn new() *CompileOptions {
+        return c.msgSend(*CompileOptions, c.class("MTLCompileOptions"), "new", .{});
+    }
+
+    pub fn init(self: *CompileOptions) *CompileOptions {
+        return c.msgSend(*CompileOptions, self, "init", .{});
+    }
+
+    pub fn release(self: *CompileOptions) void {
+        c.msgSend(void, self, "release", .{});
+    }
+
+    pub fn setFastMathEnabled(self: *CompileOptions, enabled: bool) void {
+        c.msgSend(void, self, "setFastMathEnabled:", .{enabled});
+    }
+
+    pub fn fastMathEnabled(self: *CompileOptions) bool {
+        return c.msgSend(bool, self, "fastMathEnabled", .{});
+    }
+};
+
 pub const Library = opaque {
     pub const NewError = error{CreateLibrary};
     pub const NewFunctionError = error{MissingFunction};
@@ -741,6 +767,20 @@ pub const Library = opaque {
 
     pub fn newFunctionWithName(self: *Library, name: *NS.String) NewFunctionError!*Function {
         return c.msgSend(?*Function, self, "newFunctionWithName:", .{name}) orelse error.MissingFunction;
+    }
+
+    pub fn newLibraryWithSourceSlice(self: *Device, source: [*:0]const u8, options: ?*CompileOptions) Library.NewError!*Library {
+        const string: *NS.String = .fromSlice(source);
+        defer string.release();
+
+        var err: ?*NS.Error = null;
+        const library = c.msgSend(?*Library, self, "newLibraryWithSource:options:error:", .{ string, options, &err });
+
+        if (err != null) {
+            std.log.err("{d} {f}: {f}", .{ err.?.code(), err.?.domain(), err.?.localizedDescription() });
+        }
+
+        return library orelse error.CreateLibrary;
     }
 
     pub fn label(self: *Library) ?*NS.String {
