@@ -596,18 +596,85 @@ pub const Device = opaque {
         return library;
     }
 
-    pub fn newLibraryWithSourceSlice(self: *Device, source: [*:0]const u8, options: ?*CompileOptions) Library.NewError!*Library {
-        const string: *NS.String = .fromSlice(source);
+    pub fn newLibraryWithSourceSlice(
+        self: *Device,
+        source: [*:0]const u8,
+        options: ?*CompileOptions,
+    ) Library.NewError!*Library {
+        const length = std.mem.len(source);
+
+        const string: *NS.String = c.msgSend(
+            *NS.String,
+            NS.String.alloc(),
+            "initWithBytes:length:encoding:",
+            .{ source, length, NS.String.Encoding.utf8 },
+        );
         defer string.release();
 
         var err: ?*NS.Error = null;
-        const library = c.msgSend(?*Library, self, "newLibraryWithSource:options:error:", .{ string, options, &err });
+        const library = c.msgSend(
+            ?*Library,
+            self,
+            "newLibraryWithSource:options:error:",
+            .{ string, options, &err },
+        );
 
-        if (err != null) {
-            std.log.err("{d} {f}: {f}", .{ err.?.code(), err.?.domain(), err.?.localizedDescription() });
+        if (err) |e| {
+            std.log.err("{d} {f}: {f}", .{
+                e.code(),
+                e.domain(),
+                e.localizedDescription(),
+            });
         }
 
         return library orelse error.CreateLibrary;
+    }
+
+    pub fn newLibraryWithData(
+        self: *Device,
+        data: *NS.Data,
+    ) Library.NewError!*Library {
+        var err: ?*NS.Error = null;
+
+        const library = c.msgSend(
+            ?*Library,
+            self,
+            "newLibraryWithData:error:",
+            .{ data, &err },
+        );
+
+        if (err) |e| {
+            std.log.err("{d} {f}: {f}", .{
+                e.code(),
+                e.domain(),
+                e.localizedDescription(),
+            });
+        }
+
+        return library orelse error.CreateLibrary;
+    }
+
+    extern "c" fn dispatch_data_create(
+        buffer: ?*const anyopaque,
+        size: usize,
+        queue: ?*anyopaque,
+        destructor: ?*const anyopaque,
+    ) callconv(.c) ?*anyopaque;
+
+    pub fn newLibraryWithDataSlice(
+        self: *Device,
+        bytes: []const u8,
+    ) Library.NewError!*Library {
+        const data = dispatch_data_create(
+            bytes.ptr,
+            bytes.len,
+            null,
+            null,
+        ) orelse return error.CreateLibrary;
+
+        defer c.msgSend(void, data, "release", .{});
+
+        return self.newLibraryWithData(@ptrCast(data));
     }
 
     pub fn newDefaultLibrary(self: *Device) ?*Library {
@@ -772,6 +839,10 @@ pub const CompileOptions = opaque {
 pub const Library = opaque {
     pub const NewError = error{CreateLibrary};
     pub const NewFunctionError = error{MissingFunction};
+
+    pub fn release(self: *Library) void {
+        c.msgSend(void, self, "release", .{});
+    }
 
     pub fn newFunctionWithNameSlice(self: *Library, name: [*:0]const u8) NewFunctionError!*Function {
         const string: *NS.String = .fromSlice(name);
@@ -941,6 +1012,10 @@ pub const VertexDescriptor = opaque {};
 
 pub const RenderPipelineState = opaque {
     pub const NewError = error{CreateRenderPipelineState};
+
+    pub fn release(self: *RenderPipelineState) void {
+        c.msgSend(void, self, "release", .{});
+    }
 
     pub fn device(self: *RenderPipelineState) *Device {
         return c.msgSend(*Device, self, "device", .{});

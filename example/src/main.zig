@@ -321,7 +321,7 @@ pub fn main() !void {
     const pipeline = try device.newRenderPipelineState(pipeline_descriptor);
 
     view.setWantsLayer(true);
-    view.setLayer(metal_layer.toLayer());
+    view.setLayer(metal_layer.super());
 
     const vertex_buffer = try device.newBufferWithBytes(
         @ptrCast(&vertices),

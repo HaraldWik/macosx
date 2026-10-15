@@ -1,6 +1,9 @@
 const c = @import("objc");
 
+const NS = @import("foundation.zig");
 const MTL = @import("metal.zig");
+
+pub const Size = NS.Size;
 
 pub const Layer = opaque {
     pub fn new() *Layer {
@@ -10,10 +13,14 @@ pub const Layer = opaque {
     pub fn setDevice(self: *Layer, device: *anyopaque) void {
         c.msgSend(void, self, "setDevice:", .{device});
     }
+
+    pub fn setDrawableSize(self: *Layer, size: Size) void {
+        c.msgSend(void, self, "setDrawableSize:", .{size});
+    }
 };
 
 pub const MetalLayer = opaque {
-    pub fn toLayer(self: *MetalLayer) *Layer {
+    pub fn super(self: *MetalLayer) *Layer {
         return @ptrCast(self);
     }
 
@@ -40,6 +47,10 @@ pub const MetalLayer = opaque {
 
     pub fn nextDrawable(self: *MetalLayer) ?*MTL.Drawable {
         return c.msgSend(?*MTL.Drawable, self, "nextDrawable", .{});
+    }
+
+    pub fn setDrawableSize(self: *MetalLayer, size: Size) void {
+        c.msgSend(void, self, "setDrawableSize:", .{size});
     }
 };
 

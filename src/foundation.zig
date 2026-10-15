@@ -136,6 +136,27 @@ pub const String = opaque {
 /// An immutable byte buffer.
 /// https://developer.apple.com/documentation/foundation/nsdata
 pub const Data = opaque {
+    pub fn alloc() *Data {
+        return c.msgSend(*Data, c.Class.get("NSData") catch unreachable, "alloc", .{});
+    }
+
+    pub fn initWithSlice(self: *Data, s: []const u8) *Data {
+        return c.msgSend(
+            *Data,
+            self,
+            "initWithBytes:length:",
+            .{ s.ptr, s.len },
+        );
+    }
+
+    pub fn fromSlice(s: []const u8) *Data {
+        return alloc().initWithSlice(s);
+    }
+
+    pub fn release(self: *Data) void {
+        c.msgSend(void, self, "release", .{});
+    }
+
     pub fn length(self: *Data) usize {
         return c.msgSend(usize, self, "length", .{});
     }
@@ -148,7 +169,6 @@ pub const Data = opaque {
         return c.msgSend(bool, self, "isEqualToData:", .{other});
     }
 };
-
 /// An object that enumerates the contents of an Objective-C collection.
 /// https://developer.apple.com/documentation/foundation/nsenumerator
 pub fn Enumerator(T: type) type {
