@@ -596,6 +596,20 @@ pub const Device = opaque {
         return library;
     }
 
+    pub fn newLibraryWithSourceSlice(self: *Device, source: [*:0]const u8, options: ?*CompileOptions) Library.NewError!*Library {
+        const string: *NS.String = .fromSlice(source);
+        defer string.release();
+
+        var err: ?*NS.Error = null;
+        const library = c.msgSend(?*Library, self, "newLibraryWithSource:options:error:", .{ string, options, &err });
+
+        if (err != null) {
+            std.log.err("{d} {f}: {f}", .{ err.?.code(), err.?.domain(), err.?.localizedDescription() });
+        }
+
+        return library orelse error.CreateLibrary;
+    }
+
     pub fn newDefaultLibrary(self: *Device) ?*Library {
         return c.msgSend(?*Library, self, "newDefaultLibrary", .{});
     }
@@ -767,20 +781,6 @@ pub const Library = opaque {
 
     pub fn newFunctionWithName(self: *Library, name: *NS.String) NewFunctionError!*Function {
         return c.msgSend(?*Function, self, "newFunctionWithName:", .{name}) orelse error.MissingFunction;
-    }
-
-    pub fn newLibraryWithSourceSlice(self: *Device, source: [*:0]const u8, options: ?*CompileOptions) Library.NewError!*Library {
-        const string: *NS.String = .fromSlice(source);
-        defer string.release();
-
-        var err: ?*NS.Error = null;
-        const library = c.msgSend(?*Library, self, "newLibraryWithSource:options:error:", .{ string, options, &err });
-
-        if (err != null) {
-            std.log.err("{d} {f}: {f}", .{ err.?.code(), err.?.domain(), err.?.localizedDescription() });
-        }
-
-        return library orelse error.CreateLibrary;
     }
 
     pub fn label(self: *Library) ?*NS.String {
