@@ -694,7 +694,14 @@ pub const Device = opaque {
     }
 
     pub fn newRenderPipelineState(self: *Device, descriptor: *RenderPipelineDescriptor) RenderPipelineState.NewError!*RenderPipelineState {
-        return c.msgSend(?*RenderPipelineState, self, "newRenderPipelineStateWithDescriptor:error:", .{ descriptor, null }) orelse error.CreateRenderPipelineState;
+        var ns_error: ?*NS.Error = null;
+
+        const state = c.msgSend(?*RenderPipelineState, self, "newRenderPipelineStateWithDescriptor:error:", .{ descriptor, &ns_error }) orelse {
+            if (ns_error) |err| std.log.err("pipeline error: {f}", .{err.localizedDescription()});
+            return error.CreateRenderPipelineState;
+        };
+
+        return state;
     }
 
     pub fn name(self: *Device) ?*NS.String {
@@ -1008,7 +1015,141 @@ pub const RenderPipelineColorAttachmentDescriptor = opaque {
     }
 };
 
-pub const VertexDescriptor = opaque {};
+pub const VertexDescriptor = opaque {
+    pub fn new() *VertexDescriptor {
+        return c.msgSend(*VertexDescriptor, c.getClass("MTLVertexDescriptor").?, "vertexDescriptor", .{});
+    }
+
+    pub fn attributes(self: *VertexDescriptor) *VertexAttributeArray {
+        return c.msgSend(*VertexAttributeArray, self, "attributes", .{});
+    }
+
+    pub fn layouts(self: *VertexDescriptor) *VertexBufferLayoutArray {
+        return c.msgSend(*VertexBufferLayoutArray, self, "layouts", .{});
+    }
+};
+
+pub const VertexFormat = enum(usize) {
+    invalid = 0,
+
+    uchar2 = 1,
+    uchar3 = 2,
+    uchar4 = 3,
+
+    char2 = 4,
+    char3 = 5,
+    char4 = 6,
+
+    uchar2Normalized = 7,
+    uchar3Normalized = 8,
+    uchar4Normalized = 9,
+
+    char2Normalized = 10,
+    char3Normalized = 11,
+    char4Normalized = 12,
+
+    ushort2 = 13,
+    ushort3 = 14,
+    ushort4 = 15,
+
+    short2 = 16,
+    short3 = 17,
+    short4 = 18,
+
+    ushort2Normalized = 19,
+    ushort3Normalized = 20,
+    ushort4Normalized = 21,
+
+    short2Normalized = 22,
+    short3Normalized = 23,
+    short4Normalized = 24,
+
+    half2 = 25,
+    half3 = 26,
+    half4 = 27,
+
+    float = 28,
+    float2 = 29,
+    float3 = 30,
+    float4 = 31,
+
+    int = 32,
+    int2 = 33,
+    int3 = 34,
+    int4 = 35,
+
+    uint = 36,
+    uint2 = 37,
+    uint3 = 38,
+    uint4 = 39,
+
+    int1010102Normalized = 40,
+    uint1010102Normalized = 41,
+    uchar4Normalized_bgra = 42,
+
+    uchar = 45,
+    char = 46,
+    ucharNormalized = 47,
+    charNormalized = 48,
+
+    ushort = 49,
+    short = 50,
+    ushortNormalized = 51,
+    shortNormalized = 52,
+
+    half = 53,
+
+    _,
+};
+
+pub const VertexAttributeDescriptor = opaque {
+    pub fn setFormat(self: *VertexAttributeDescriptor, format: VertexFormat) void {
+        c.msgSend(void, self, "setFormat:", .{format});
+    }
+
+    pub fn setOffset(self: *VertexAttributeDescriptor, offset: usize) void {
+        c.msgSend(void, self, "setOffset:", .{offset});
+    }
+
+    pub fn setBufferIndex(self: *VertexAttributeDescriptor, index: usize) void {
+        c.msgSend(void, self, "setBufferIndex:", .{index});
+    }
+};
+
+pub const VertexAttributeArray = opaque {
+    pub fn objectAtIndexedSubscript(self: *VertexAttributeArray, index: usize) *VertexAttributeDescriptor {
+        return c.msgSend(*VertexAttributeDescriptor, self, "objectAtIndexedSubscript:", .{index});
+    }
+};
+
+pub const VertexStepFunction = enum(usize) {
+    constant = 0,
+    per_vertex = 1,
+    per_instance = 2,
+    per_patch = 3,
+    per_patch_control_point = 4,
+    _,
+};
+
+pub const VertexBufferLayoutDescriptor = opaque {
+    pub fn setStride(self: *VertexBufferLayoutDescriptor, stride: usize) void {
+        c.msgSend(void, self, "setStride:", .{stride});
+    }
+
+    pub fn setStepFunction(self: *VertexBufferLayoutDescriptor, step_function: VertexStepFunction) void {
+        c.msgSend(void, self, "setStepFunction:", .{step_function});
+    }
+
+    pub fn setStepRate(self: *VertexBufferLayoutDescriptor, rate: usize) void {
+        c.msgSend(void, self, "setStepRate:", .{rate});
+    }
+};
+
+pub const VertexBufferLayoutArray = opaque {
+    pub fn objectAtIndexedSubscript(self: *VertexBufferLayoutArray, index: usize) *VertexBufferLayoutDescriptor {
+        return c.msgSend(*VertexBufferLayoutDescriptor, self, "objectAtIndexedSubscript:", .{index});
+    }
+};
 
 pub const RenderPipelineState = opaque {
     pub const NewError = error{CreateRenderPipelineState};
